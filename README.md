@@ -1,57 +1,72 @@
-<!--
-The name of the project. Can also be a logo or ASCII Art Header (this [site](http://patorjk.com/software/taag/#p=display&f=Slant&t=Pro%20WebApp) can generate nice ASCII art)	
--->	
-# Project Name
+# Terraform Module Workflows
 
-<!---
-Some prose that describes the project, in as much detail as necessary to ensure the reader walks away with a basic understanding of the purpose of this repository. Diagrams included here can be useful to help the reader understand how the system is architectured. Links to other relevant documentation might also be useful.
--->
-Clear description of what the project does. 
+Shared GitHub workflows for Terraform. There are currently three workflows in this repository:
 
-<!-- 
-A description of how the code included in the project runs in various environments, including the URLs if that's appropriate
--->
-## Where Does This Run
+* [Module Auto Publish](#Module-Auto-Publish-Workflow)
+* [Module Lint](#Module-Lint-Workflow)
+* [Module Test](#Module-Test-Workflow)
 
-<!--
-Step-by-step instructions on how to install the code and any necessary dependencies
--->	
-## How to Use
+## Module Auto Publish Workflow
 
-<!--
-Make liberal use of code blocks in the "How to Use" section, so it's easy to cut-and-paste the relevant commands into a terminal
+This workflow creates a release that will be auto published by Terraform Cloud if the module is registered. This workflow is intended to be used on push to main:
 
-Example (Node):
+1. **Get version** - The module's sematic version that is extracted from the `version` file in the module's root directory.
+1. **Publish release** - Publish the release using the version as the tag name. This will trigger Terraform Cloud to publish the updated version to the registry.
 
-```bash
-# Clone the repository
-git clone git@github.com:invitation-homes/my-cool-repo.git
+> **Note**
+> This workflow assumes that the `version` file is at the root of the repository and uses a semver syntax like `1.0.0` or `v1.0.0`
 
-# Install dependencies
-npm install
+To use this workflow, add the following to your workflow file:
 
-# Run the application
-npm start
+```yaml
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  terraform-module-auto-publish:
+    name: Publish module
+    uses: invitation-homes/terraform-workflows/.github/workflows/module-auto-publish.yml@v1
+    secrets: inherit
 ```
 
--->	
-```bash
-# Clone the repository
-git clone git@github.com:invitation-homes/my-cool-repo.git
+## Module Lint Workflow
 
-# Install dependencies
-# <how_to_install_dependencies>
+This workflow runs standard linting for Terraform Modules:
 
-# Run the application
-# <how_to_start_the_application>
+1. **Terraform fmt** - Verify that the Terraform code is formatted correctly
+1. **tflint** - Run [tflint](https://github.com/terraform-linters/tflint) with custom rules defined in `.tflint.hcl`.
+1. **kics** - Run [KICS](https://kics.io/) to scan for medium or high security concerns in IaC.
+1. **golangci** - Run [golangci](https://golangci.com/) for Terratest Go code.
+
+
+To use this workflow, add the following to your workflow file:
+
+```yaml
+jobs:
+  terraform-module-lint:
+    name: Lint module
+    uses: invitation-homes/terraform-workflows/.github/workflows/module-lint.yml@v1
+    secrets: inherit
 ```
 
-<!-- 
-Instructions on how to run locally -- necessary configuration files, secret configuration, etc. As a developer, this section combined with the previous section should give me all of the necessary information to check out and run the project locally	
--->	
-### Local Development
+## Module Test Workflow
 
-<!-- 
-How is the code built and deployed? Where does the project run? What linting and security checks are in place? Where can you view test results & static code analysis?
--->	
-## CI/CD & Deployment
+This workflow runs terratest for Terraform Modules:
+
+1. **AWS Sandbox Authentication** - Using OIDC, access the Sandbox account with read-only credentials. This is necessary for terratest to run Terraform plan. Full integration tests are not available at this time.
+1. **terratest** - Run [terratest](https://terratest.gruntwork.io/) on the `./test` directory.
+
+> **Note**
+> This workflow assumes that a `test` directory is at the root of the repository
+
+To use this workflow, add the following to your workflow file:
+
+```yaml
+jobs:
+  terraform-module-lint:
+    name: Lint module
+    uses: invitation-homes/terraform-workflows/.github/workflows/module-lint.yml@v1
+    secrets: inherit
+```
