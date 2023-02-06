@@ -1,0 +1,148 @@
+name: Lint
+on: [workflow_call]
+
+jobs:
+  tf-format:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: ~1
+
+      - name: Terraform Format
+        id: fmt
+        run: terraform fmt -check
+        continue-on-error: true
+
+      - name: Post to PR
+        uses: actions/github-script@v6
+        if: steps.fmt.outcome == 'failure'
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const output = `#### Terraform Format and Style 🖌\`${{ steps.fmt.outcome }}\`
+            \nRun \`terraform fmt -recursive\` to resolve. [link](https://www.terraform.io/cli/commands/fmt)`
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output
+            })
+
+      - name: Terraform fmt Status
+        if: steps.fmt.outcome == 'failure'
+        run: exit 1
+
+  tflint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - uses: terraform-linters/setup-tflint@v3
+        name: Setup TFLint
+        with:
+          tflint_version: latest
+
+      - name: Get Rules
+        uses: actions/checkout@v3
+        with:
+          repository: invitation-homes/terraform-workflows
+          path: ./custom-linting-rules
+          token: ${{ secrets.GH_REPO_ACCESS_TOKEN }}
+
+      - name: Initialize TFLint
+        run: tflint --init --config=./custom-linting-rules/.tflint.hcl
+
+      - name: Run TFLint
+        id: tflint
+        run: |
+          tflint -f compact --config=.tfsec/.tflint.hcl --no-color | tee tflint.log
+          result_code=${PIPESTATUS[0]}
+          LOG="$(cat tflint.log)"
+          # GitHub Actions does not support multi-line strings as outputs, so line breaks must be encoded
+          # they will automatically be substituted back in during GitHub Actions interpolation later, before script execution
+          # first, encode % so that instances of it aren't mistaken for encodings later
+          LOG="${LOG//'%'/%25}"
+          LOG="${LOG//$'\n'/%0A}"
+          LOG="${LOG//$'\r'/%0D}"
+          # escape any backticks, which delimit template literals in Node.js (raw strings)
+          # and escape '$' which will also trip up the Node.js interpolation in the github-script step
+          LOG="${LOG//\`/\\\`}"
+          LOG="${LOG//\$/\\\$}"
+          # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#setting-an-output-parameter
+          echo "::set-output name=response::$LOG"
+          # exit with the pertinent error code only after we have exposed the output for later steps 
+          exit $result_code
+        continue-on-error: true
+
+      - name: Post to PR
+        uses: actions/github-script@v6
+        if: steps.tflint.outcome == 'failure'
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            // interpret tflint output as a template literal (raw string)
+            // GitHub Actions will reinsert the line breaks and % during its interpolation before script execution
+            var tflint = String.raw`${{ steps.tflint.outputs.response }}`;
+            // put back the characters which were escaped by bash, now we have correctly ingested the raw output
+            tflint = tflint.replace(/\\\$/g, '$')
+            tflint = tflint.replace(/\\\`/g, '`')
+            const output = `#### TFLint 📖\`${{ steps.tflint.outcome }}\`
+            <details><summary>Directory: ${{ matrix.directory }}</summary>
+            \`\`\`
+            ${tflint}
+            \`\`\`
+            </details>`;
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output
+            })
+
+      - name: TFLint Status
+        if: steps.tflint.outcome == 'failure'
+        run: exit 1
+
+  kics:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clone repo
+        uses: actions/checkout@v3
+
+      - name: Get Rules
+        uses: actions/checkout@v3
+        with:
+          repository: invitation-homes/terraform-workflows
+          path: ./custom-linting-rules
+          token: ${{ secrets.GH_REPO_ACCESS_TOKEN }}
+
+      - name: Run KICS
+        uses: checkmarx/kics-github-action@v1.6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          output_path: kics_results/
+          fail_on: high,medium
+          enable_comments: true
+
+      - name: Display KICS results
+        run: |
+          cat kics_results/results.json
+  
+  golangci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v3
+        with:
+          go-version: 1.20
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: latest
+          working-directory: ./test
