@@ -61,7 +61,7 @@ jobs:
       - name: Run TFLint
         id: tflint
         run: |
-          tflint -f compact --config=.tfsec/.tflint.hcl --no-color | tee tflint.log
+          tflint -f compact --config=./custom-linting-rules/.tflint.hcl --no-color | tee tflint.log
           result_code=${PIPESTATUS[0]}
           LOG="$(cat tflint.log)"
           # GitHub Actions does not support multi-line strings as outputs, so line breaks must be encoded
@@ -75,7 +75,7 @@ jobs:
           LOG="${LOG//\`/\\\`}"
           LOG="${LOG//\$/\\\$}"
           # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#setting-an-output-parameter
-          echo "::set-output name=response::$LOG"
+          echo "response=$LOG" >> $GITHUB_OUTPUT
           # exit with the pertinent error code only after we have exposed the output for later steps 
           exit $result_code
         continue-on-error: true
