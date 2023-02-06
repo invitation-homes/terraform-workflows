@@ -1,6 +1,10 @@
 name: Test
 on: [workflow_call]
 
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
   terratest:
     runs-on: ubuntu-latest
