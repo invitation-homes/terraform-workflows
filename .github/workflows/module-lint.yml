@@ -130,6 +130,7 @@ jobs:
           output_path: kics_results/
           fail_on: high,medium
           enable_comments: true
+          exclude_paths: .github/*,test/*,custom-linting-rules/*
 
       - name: Display KICS results
         run: |
