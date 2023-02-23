@@ -93,18 +93,18 @@ jobs:
         uses: actions/checkout@v3
         with:
           repository: invitation-homes/terraform-workflows
-          path: ./custom-linting-rules
+          path: ${{ matrix.directory }}/custom-linting-rules
           token: ${{ secrets.GH_REPO_ACCESS_TOKEN }}
 
       - name: Setup TFLint
-        uses: terraform-linters/setup-tflint@v1
+        uses: terraform-linters/setup-tflint@v3
         if: steps.check-tf-files.outputs.files_exists == 'true'
         with:
           tflint_version: latest
 
       - name: Initialize TFLint
         if: steps.check-tf-files.outputs.files_exists == 'true'
-        working-directory: ${{ matrix.directory  }}
+        working-directory: ${{ matrix.directory }}
         run: tflint --init --config=./custom-linting-rules/.tflint.hcl
 
       - name: Run TFLint
@@ -112,7 +112,7 @@ jobs:
         if: steps.check-tf-files.outputs.files_exists == 'true'
         working-directory: ${{ matrix.directory  }}
         run: |
-          tflint -f compact --config=.tfsec/.tflint.hcl --no-color | tee tflint.log
+          tflint -f compact --config=./custom-linting-rules/.tflint.hcl --no-color | tee tflint.log
           result_code=${PIPESTATUS[0]}
           LOG="$(cat tflint.log)"
           # GitHub Actions does not support multi-line strings as outputs, so line breaks must be encoded
@@ -187,5 +187,6 @@ jobs:
           exclude_paths: .github/*,test/*
 
       - name: Display KICS results
+        if: steps.check-tf-files.outputs.files_exists == 'true'
         run: |
           cat kics_results/results.json
