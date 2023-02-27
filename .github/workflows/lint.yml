@@ -37,7 +37,7 @@ jobs:
 
       - name: "Check for TF files"
         id: check-tf-files
-        uses: andstor/file-existence-action@v1
+        uses: andstor/file-existence-action@v2
         with:
           files: "${{ matrix.directory }}/*.tf"
 
@@ -84,7 +84,7 @@ jobs:
 
       - name: "Check for TF files"
         id: check-tf-files
-        uses: andstor/file-existence-action@v1
+        uses: andstor/file-existence-action@v2
         with:
           files: "${{ matrix.directory }}/*.tf"
 
@@ -170,14 +170,14 @@ jobs:
 
       - name: Check for terraform files
         id: check-tf-files
-        uses: andstor/file-existence-action@v1
+        uses: andstor/file-existence-action@v2
         with:
           files: "${{ matrix.directory }}/*.tf"
 
       - name: Run KICS
         id: kics
         if: steps.check-tf-files.outputs.files_exists == 'true'
-        uses: checkmarx/kics-github-action@v1.6
+        uses: checkmarx/kics-github-action@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           path: ${{ matrix.directory }}
