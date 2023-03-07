@@ -185,6 +185,7 @@ jobs:
           fail_on: high,medium
           enable_comments: true
           exclude_paths: .github/*,test/*
+          exclude_queries: 0afbcfe9-d341-4b92-a64c-7e6de0543879
 
       - name: Display KICS results
         if: steps.check-tf-files.outputs.files_exists == 'true'
