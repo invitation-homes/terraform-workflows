@@ -23,6 +23,7 @@ jobs:
         role-to-assume: arn:aws:iam::217938946443:role/gh-action-read-only
         role-session-name: terraformModuleTest
         role-duration-seconds: 1200
+        mask-aws-account-id: false # By default, AWS account ID is hidden
     
     - uses: actions/checkout@v3
     - name: test
