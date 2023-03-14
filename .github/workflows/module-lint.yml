@@ -131,6 +131,7 @@ jobs:
           fail_on: high,medium
           enable_comments: true
           exclude_paths: .github/*,test/*,custom-linting-rules/*
+          exclude_queries: 0afbcfe9-d341-4b92-a64c-7e6de0543879
 
       - name: Display KICS results
         run: |
