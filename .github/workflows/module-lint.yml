@@ -123,7 +123,7 @@ jobs:
           token: ${{ secrets.GH_REPO_ACCESS_TOKEN }}
 
       - name: Run KICS
-        uses: checkmarx/kics-github-action@v1.6
+        uses: checkmarx/kics-github-action@v1.5
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           path: './'
